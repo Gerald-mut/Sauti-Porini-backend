@@ -1,0 +1,9 @@
+requests
+supabase
+python-dotenv
+fastapi
+uvicorn[standard]
+africastalking
+streamlit
+streamlit-folium
+pandas

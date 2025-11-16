@@ -1,0 +1,35 @@
+### ========================================
+### Create Your GFW API Key
+###
+### 1. Paste your existing Auth Token
+### 2. Update the JSON with your info
+### 3. Click "Send Request"
+### ========================================
+
+# STEP 1: Paste your token here (replace the placeholder)
+
+@myAuthToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MGRmNDZkMDdlMTRhMGYyZGYxZmIzMiIsInJvbGUiOiJVU0VSIiwicHJvdmlkZXIiOiJsb2NhbCIsImVtYWlsIjoid2FuZ29tZWdlcmFsZDIwMjNAc3R1ZGVudHMubXVzdC5hYy5rZSIsImV4dHJhVXNlckRhdGEiOnsiYXBwcyI6WyJnZnciXX0sImNyZWF0ZWRBdCI6MTc2Mjg1NTI5NTEwMCwiaWF0IjoxNzYyODU1Mjk1fQ.RrEx5wNTSy9DOQfyzyCBKRifj0-Gc4TwHAYmcgqRnnE
+
+# STEP 2: Update your app info below
+GET https://data-api.globalforestwatch.org/datasets
+Authorization: Bearer {{myAuthToken}}
+Content-Type: application/json
+
+{
+    "alias": "Forest Guard",
+    "email": "wangomegerald2023@students.must.ac.ke",
+    "organization": "Forest Guard",
+    "domains": []
+}
+
+
+Invoke-WebRequest -Uri 'https://api.example.com/datasets' -Headers @{ "x-api-key" = "2fb4f1f7-bd93-4e9b-ae2a-1970ece8f893" } > datasets
+Invoke-WebRequest -Uri 'https://data-api.globalforestwatch.org/datasets' -Headers @{ "x-api-key" = "2fb4f1f7-bd93-4e9b-ae2a-1970ece8f893" } > datasets
+curl -X GET 'https://data-api.globalforestwatch.org/datasets' -H 'x-api-key: 2fb4f1f7-bd93-4e9b-ae2a-1970ece8f893' > datasets.json
+
+$headers = @{
+    "x-api-key" = "2fb4f1f7-bd93-4e9b-ae2a-1970ece8f893"
+    "Content-Type" = "application/json"
+}
+
+Invoke-WebRequest -Uri 'https://data-api.globalforestwatch.org/datasets' -Headers $headers > datasets
