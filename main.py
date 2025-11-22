@@ -119,13 +119,20 @@ async def ussd_callback(
     response = ""
 
     if text == "":
+        # Initial menu
         response = "CON Welcome to Sauti Porini\n"
+        response += "1. Report an Incident\n"
+        response += "2. Ranger Hotline"
+    elif text == "1":
+        # Ask for location
         response = "CON Enter Location of Incident:\n"
-        response += "(e.g. Near Kakamega North Gate)"
-    elif len(parts) == 2 and parts[0] == "1":
+        response += "(e.g. Near North Gate)"
+    elif text.startswith("1*") and len(parts) == 2:
+        # Ask for description
         response = "CON Describe what you see:\n"
         response += "(e.g. 3 trucks, red cabin)"
-    elif len(parts) == 3 and parts[0] == "1":
+    elif text.startswith("1*") and len(parts) == 3:
+        # User has provided all details
         location_input = parts[1]
         description_input = parts[2]
         background_tasks.add_task(save_report_to_db, phoneNumber, location_input, description_input)

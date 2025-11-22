@@ -2,8 +2,8 @@ import requests
 import time
 import random
 
-# Your local or ngrok URL
-API_URL = "http://127.0.0.1:8000/iot-event" 
+
+API_URL = "http://127.0.0.1:8000/iot-events" 
 
 # 3 Sensors fixed in Kakamega
 SENSORS = [
@@ -18,8 +18,8 @@ while True:
     # Pick a random sensor
     sensor = random.choice(SENSORS)
     
-    # 10% chance to hear a chainsaw
-    if random.random() < 0.10:
+    # 5% chance to hear a chainsaw
+    if random.random() < 0.05:
         event = {
             "sensor_id": sensor["id"],
             "lat": sensor["lat"],
