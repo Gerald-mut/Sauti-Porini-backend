@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import os
 
 # 1. Setup & Config
-st.set_page_config(page_title="ForestGuard Kenya", layout="wide")
+st.set_page_config(page_title="Sauti Porini", layout="wide")
 load_dotenv()
 
 # 2. Connect to Supabase
@@ -29,7 +29,7 @@ def get_data():
     alerts_response = supabase.table("satellite_alerts").select("*").execute()
     alerts_df = pd.DataFrame(alerts_response.data)
     
-    # Fetch USSD Reports (Empty for now, but we prepare for it)
+    # Fetch USSD Reports 
     ussd_response = supabase.table("ussd_reports").select("*").execute()
     ussd_df = pd.DataFrame(ussd_response.data)
     
@@ -38,7 +38,7 @@ def get_data():
 alerts_df, ussd_df = get_data()
 
 # 4. Layout - Header
-st.title("ForestGuard Kenya: Command Center")
+st.title("Sauti Porini Kenya: Command Center")
 st.markdown("Real-time monitoring of **Kakamega Forest** combining satellite intelligence and community reporting.")
 
 col1, col2, col3 = st.columns(3)

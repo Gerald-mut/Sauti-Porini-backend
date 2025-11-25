@@ -25,7 +25,7 @@ def run_ingest():
         print(f"Connection error: {e}")
         return
 
-    # 2. Define Date Range (Last 14 days)
+    # 2. Define Date Range 
     today = datetime.date.today()
     start_date = (today - datetime.timedelta(days=14)).strftime('%Y-%m-%d')
     end_date = today.strftime('%Y-%m-%d')
@@ -49,7 +49,7 @@ def run_ingest():
         ]]
     }
 
-    # 4. Simplified SQL Query
+    # 4.SQL Query
     # Note: Use "results" table and the actual field names from the dataset
     sql_query = (
         f"SELECT latitude, longitude, "
