@@ -1,8 +1,8 @@
-# Sauti Porini 2.0: Autonomous Forest Fire Agent
+# Sauti Porini: Autonomous Forest Fire Agent
 
 Sauti Porini (Swahili for _Voice of the Wilderness_) is a **Marathon Agent** built for the Gemini 3 Hackathon. It provides autonomous, long-running wildfire monitoring for Kenyan forests by fusing satellite data, climate metrics, and AI reasoning.
 
-## 🧠 Gemini 3 Integration
+##  Gemini 3 Integration
 
 This project utilizes **Gemini 3 Pro (`gemini-3-pro-preview`)** as a core reasoning engine. Unlike standard software, Sauti Porini has no hardcoded risk thresholds. Instead:
 
@@ -10,7 +10,7 @@ This project utilizes **Gemini 3 Pro (`gemini-3-pro-preview`)** as a core reason
 - **Autonomous Decisions**: Gemini 3 decides when to escalate states (NORMAL → WATCH → ALERT).
 - **Bilingual Alerts**: Automatically generates situational summaries in English and Swahili.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Requirements
 
@@ -48,14 +48,14 @@ python api.py
 python main_agent.py
 ```
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **AI**: Google Gemini 3 Pro
 - **Backend**: Python (FastAPI)
 - **Database**: Supabase (PostgreSQL)
 - **Data**: NASA FIRMS (Fire Data), Open-Meteo (ERA5 Climate Data)
 
-## 🎥 Demo
+## Demo
 
 To simulate a fire and see the AI Agent's response:
 
