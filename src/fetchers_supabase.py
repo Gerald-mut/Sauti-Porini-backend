@@ -1,12 +1,12 @@
 import os
 import time
 import random
-from supabase import create_client, Client
 from datetime import datetime
+from .simple_supabase import SimpleSupabase
 
 class SupabaseFetcher:
     def __init__(self, url: str, key: str):
-        self.supabase: Client = create_client(url, key)
+        self.supabase = SimpleSupabase(url, key)
 
     def fetch_and_store_data(self, zone_id: int):
         """
@@ -27,7 +27,7 @@ class SupabaseFetcher:
         }
         
         try:
-            self.supabase.table("weather_logs").insert(weather_payload).execute()
+            self.supabase.insert("weather_logs", weather_payload)
             print(f"  -> Weather logged: {temp}C, {humidity}%")
         except Exception as e:
             print(f"  [ERROR] Writing weather: {e}")

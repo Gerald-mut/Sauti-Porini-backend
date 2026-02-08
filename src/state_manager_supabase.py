@@ -1,61 +1,50 @@
-from supabase import Client
-from datetime import datetime, timedelta
+from datetime import datetime
+from .simple_supabase import SimpleSupabase
 
 class SupabaseStateManager:
-    def __init__(self, supabase: Client):
+    def __init__(self, supabase: SimpleSupabase):
         self.supabase = supabase
 
-    def analyze_zone(self, zone_id: int):
-        print(f"Analyzing Zone ID: {zone_id}...")
+    def analyze_zone(self, zone_id: int, zone_name: str, ai_analyzer):
+        """
+        Orchestrates the analysis by gathering data and asking Gemini 3 to decide.
+        """
+        print(f"Analyzing Zone: {zone_name} (ID: {zone_id})...")
 
-        # 1. Get Latest Weather
-        weather_res = self.supabase.table("weather_logs")\
-            .select("*")\
-            .eq("zone_id", zone_id)\
-            .order("recorded_at", desc=True)\
-            .limit(1)\
-            .execute()
-        
-        current_weather = weather_res.data[0] if weather_res.data else None
+        # 1. Get Current Status
+        zone_info = self.supabase.select("zones", "current_status", filters={"id": zone_id})
+        current_status = zone_info[0]['current_status'] if zone_info else "NORMAL"
 
-        # 2. Get Recent Fire Events (Last 1 hour)
-        # Note: In a real app, timezone handling is critical. 
-        # For simplicity here we check the last few entries or just any "recent" one.
-        fire_res = self.supabase.table("fire_events")\
-            .select("*")\
-            .eq("zone_id", zone_id)\
-            .order("detected_at", desc=True)\
-            .limit(5)\
-            .execute()
+        # 2. Get Weather History (Last 3 points for trend)
+        weather_history = self.supabase.select(
+            table="weather_logs",
+            filters={"zone_id": zone_id},
+            order="recorded_at.desc",
+            limit=3
+        )
         
-        fires = fire_res.data
+        # 3. Get Recent Fire Events
+        fire_events = self.supabase.select(
+            table="fire_events",
+            filters={"zone_id": zone_id},
+            order="detected_at.desc",
+            limit=5
+        )
         
-        # Check if any fire is VERY recent (e.g. within last 30 mins)
-        # For MVP Demo, we'll just check if there's any fire entered in the last check cycle essentially.
-        # But to make the 'demo_trigger' work persistently, we might want to check if there is an *unresolved* fire.
-        # Simplification: If fire detected < 1 hour ago -> ALERT.
+        # 4. Ask Gemini 3 to Decide
+        decision = ai_analyzer.evaluate_risk(zone_name, current_status, weather_history, fire_events)
         
-        active_fire = False
-        if fires:
-            last_fire_time = fires[0]['detected_at']
-            # Parse ISO string to datetime if needed, or just assume fetcher puts recent stuff.
-            # We'll treat the existence of a recent record as active fire.
-            active_fire = True 
-            print(f"  -> Found {len(fires)} recent fire events!")
+        new_status = decision['new_status']
+        print(f"  -> Gemini Decision: {new_status} | {decision['reasoning']}")
 
-        # 3. Determine State
-        new_status = "NORMAL"
+        # 5. Update Zone if Changed OR if it's an active ALERT (keep timestamp fresh)
+        if new_status != current_status or new_status == "ALERT":
+            self.supabase.update(
+                table="zones", 
+                data={"current_status": new_status, "last_updated": datetime.utcnow().isoformat()},
+                filters={"id": zone_id}
+            )
+            # Log the alert history
+            ai_analyzer.save_alert(zone_id, decision)
         
-        if active_fire:
-            new_status = "ALERT"
-        elif current_weather:
-            # Rule: Temp > 28 and Humidity < 25 -> WATCH
-            if current_weather['temp'] > 28.0 and current_weather['humidity'] < 25.0:
-                new_status = "WATCH"
-
-        # 4. Update Zone
-        self.supabase.table("zones").update({"current_status": new_status, "last_updated": datetime.utcnow().isoformat()}).eq("id", zone_id).execute()
-        
-        print(f"  -> Status set to: {new_status}")
-        
-        return new_status, current_weather, fires
+        return new_status

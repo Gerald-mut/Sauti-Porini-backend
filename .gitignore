@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Python byte-code / optimized / DLLs
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# IDE settings
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db

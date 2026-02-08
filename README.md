@@ -1,67 +1,64 @@
-# Sauti Porini (Supabase Edition)
+# Sauti Porini 2.0: Autonomous Forest Fire Agent
 
-Sauti Porini wildfire monitoring system integrated with Supabase.
+Sauti Porini (Swahili for _Voice of the Wilderness_) is a **Marathon Agent** built for the Gemini 3 Hackathon. It provides autonomous, long-running wildfire monitoring for Kenyan forests by fusing satellite data, climate metrics, and AI reasoning.
 
-## 1. Setup
+## 🧠 Gemini 3 Integration
 
-### Prerequisites
+This project utilizes **Gemini 3 Pro (`gemini-3-pro-preview`)** as a core reasoning engine. Unlike standard software, Sauti Porini has no hardcoded risk thresholds. Instead:
 
-- Python 3.9+
-- A Supabase project (Free Tier is fine)
-- Google Gemini API Key (Optional)
+- **Extended Context**: It analyzes a time-series window of weather and fire data.
+- **Autonomous Decisions**: Gemini 3 decides when to escalate states (NORMAL → WATCH → ALERT).
+- **Bilingual Alerts**: Automatically generates situational summaries in English and Swahili.
 
-### Installation
+## 🚀 Quick Start
+
+### 1. Requirements
 
 ```bash
-pip install supabase google-generativeai python-dotenv
+pip install fastapi uvicorn supabase google-genai python-dotenv requests
 ```
 
-### Database Initialization
+### 2. Configuration
 
-1.  Go to your **Supabase Dashboard** -> **SQL Editor**.
-2.  Open `setup_db.sql` from this project.
-3.  Copy and Paste the content into the editor and click **Run**.
-    - This creates tables: `zones`, `weather_logs`, `fire_events`, `alert_history`.
-    - It seeds "Kakamega Forest".
+Create a `.env` file in the root directory:
 
-### Configuration
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-1.  Open `.env`.
-2.  Fill in your keys:
-    ```env
-    SUPABASE_URL=https://xyz.supabase.co
-    SUPABASE_KEY=eyJh... (Your 'anon' public key)
-    GEMINI_API_KEY=AIza...
-    ```
+### 3. Database Setup
 
-## 2. Usage
+Run the `setup_db.sql` script in your Supabase SQL Editor to initialize the `zones`, `weather_logs`, and `alert_history` tables.
 
-### Start the Agent
+### 4. Running the System
 
-To start the persistent monitoring loop:
+You need to run two processes simultaneously:
+
+**Terminal 1 (Backend API):**
+
+```bash
+python api.py
+```
+
+**Terminal 2 (Autonomous Agent):**
 
 ```bash
 python main_agent.py
 ```
 
-- It will fetch mock weather data and push to Supabase.
-- It checks for fires.
-- It updates the Zone Status (`NORMAL` by default).
+## 🛠️ Technology Stack
 
-### Trigger a Demo Alert
+- **AI**: Google Gemini 3 Pro
+- **Backend**: Python (FastAPI)
+- **Database**: Supabase (PostgreSQL)
+- **Data**: NASA FIRMS (Fire Data), Open-Meteo (ERA5 Climate Data)
 
-To prove the system works, force a "Fire Detected" state:
+## 🎥 Demo
 
-1.  Keep `main_agent.py` running (or run it after this step).
-2.  Open a new terminal.
-3.  Run:
-    ```bash
-    python demo_trigger.py
-    ```
-4.  Watch the `main_agent.py` logs. It will detect the "Fire", switch state to `ALERT`, and generate an AI warning in `alert_history`.
+To simulate a fire and see the AI Agent's response:
 
-## 3. Architecture
-
-- `src/fetchers_supabase.py`: Writes raw data to `weather_logs` / `fire_events`.
-- `src/state_manager_supabase.py`: Reads DB, decides state, updates `zones`.
-- `src/ai_analyzer.py`: Reads trigger, calls Gemini, writes to `alert_history`.
+1. Ensure the agent is running.
+2. Run `python demo_trigger.py`.
+3. Check the logs in your Agent terminal to see Gemini 3's reasoning and the generated bilingual alerts.

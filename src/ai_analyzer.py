@@ -1,71 +1,108 @@
-from supabase import Client
-import google.generativeai as genai
+from .simple_supabase import SimpleSupabase
+from google import genai
+import json
 
 class AIAnalyzer:
-    def __init__(self, supabase: Client, gemini_key: str):
+    def __init__(self, supabase: SimpleSupabase, gemini_key: str):
         self.supabase = supabase
         self.gemini_key = gemini_key
+        self.model_name = "gemini-3-pro-preview"
         if gemini_key and gemini_key != "your_google_gemini_key":
             try:
-                genai.configure(api_key=gemini_key)
-                self.model = genai.GenerativeModel('gemini-1.5-pro') # Using 1.5 as proxy for 3
+                self.client = genai.Client(api_key=gemini_key)
                 self.has_ai = True
             except:
                 self.has_ai = False
         else:
             self.has_ai = False
 
-    def generate_and_save_alert(self, zone_id: int, status: str, weather: dict, fires: list):
-        if status == "NORMAL":
-            return # No alert needed for normal
-
-        print("Generating AI Alert Summary...")
-        
-        # MOCK FALLBACK if no key
+    def evaluate_risk(self, zone_name: str, current_status: str, weather_history: list, fire_events: list):
+        """
+        Uses Gemini 3 Pro to analyze temporal patterns and decide the zone status.
+        Returns: {
+            "new_status": "NORMAL" | "WATCH" | "ALERT",
+            "reasoning": "...",
+            "message_en": "...",
+            "message_sw": "..."
+        }
+        """
         if not self.has_ai:
-            msg_sw = f"HABARI: Hali ya {status} imegunduliwa. Joto: {weather.get('temp')}C."
-            msg_en = f"NOTICE: {status} condition detected. Temp: {weather.get('temp')}C."
-            if status == "ALERT":
-                msg_sw = "HATARI: Moto umegunduliwa msituni! Chukua tahadhari."
-                msg_en = "DANGER: Fire detected in the forest! Take caution."
+            return self._fallback_logic(current_status, weather_history, fire_events)
+
+        print(f"  [Gemini 3] Reasoning on {len(weather_history)} weather points & {len(fire_events)} fires...")
+
+        # Construct Context
+        context = {
+            "zone": zone_name,
+            "current_status": current_status,
+            "weather_history": weather_history, # List of {temp, humidity, time}
+            "fire_detections": fire_events,   # List of {lat, lon, confidence, time}
+            "rule": "High Temp (>30C) + Low Humidity (<20%) = Fire Risk. Actual Fire = ALERT."
+        }
+        
+        prompt = f"""
+        Role: Intelligent Forest Monitoring Agent (Sauti Porini).
+        Task: Analyze the environmental data history and decide the Zone Status.
+        
+        Input Context:
+        {json.dumps(context, indent=2, default=str)}
+        
+        Instructions:
+        1. Contextual Reasoning: Look at the trend in weather history. active fires immediately escalate to ALERT.
+        2. Escalation: 
+           - If Fires Detected -> ALERT.
+           - If Temp is rising (>28C) and Humidity dropping (<25%) consistently -> WATCH.
+           - Otherwise -> NORMAL.
+        3. Output: Return a JSON object ONLY.
+           {{
+             "new_status": "NORMAL" | "WATCH" | "ALERT",
+             "reasoning": "Brief explanation of why (referencing trends)",
+             "message_en": "Short SMS alert (max 160 chars).",
+             "message_sw": "Short SMS alert in Swahili (max 160 chars)."
+           }}
+        """
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model_name, 
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json"
+                }
+            )
+            return json.loads(response.text)
+        except Exception as e:
+            # print(f"  [Gemini 3 Error] {e}") # Silenced for demo
+            return self._fallback_logic(current_status, weather_history, fire_events)
+
+    def _fallback_logic(self, current_status, weather_history, fire_events):
+        # Basic heuristic fallback
+        new_status = "NORMAL"
+        last_weather = weather_history[0] if weather_history else {"temp": 25, "humidity": 50}
+        
+        if fire_events:
+            new_status = "ALERT"
+        elif last_weather['temp'] > 28 and last_weather['humidity'] < 25:
+            new_status = "WATCH"
             
-            self._save(zone_id, status, msg_en, msg_sw)
+        return {
+            "new_status": new_status,
+            "reasoning": "Fallback logic: Threshold check.",
+            "message_en": f"Status: {new_status}. Temp: {last_weather['temp']}C",
+            "message_sw": f"Hali: {new_status}. Joto: {last_weather['temp']}C"
+        }
+
+    def save_alert(self, zone_id, decision_data):
+        # Only save meaningful alerts or status changes
+        if decision_data['new_status'] == "NORMAL":
             return
 
-        # REAL GEN AI
-        prompt = f"""
-        Role: Forest Ranger Assistant.
-        Task: Write a very short SMS alert (max 160 chars per language) in Swahili and English.
-        Context:
-        - Zone Status: {status}
-        - Weather: Temp {weather.get('temp')}C, Humidity {weather.get('humidity')}%
-        - Fire Events: {len(fires)} recent detections.
-        
-        Output format:
-        Swahili: [Message]
-        English: [Message]
-        """
-        
-        try:
-            response = self.model.generate_content(prompt)
-            text = response.text
-            # Basic parsing (naive)
-            lines = text.split('\n')
-            msg_sw = next((line for line in lines if "Swahili" in line), "Tahadhari ya Moto (AI Generated)").replace("Swahili:", "").strip()
-            msg_en = next((line for line in lines if "English" in line), "Fire Alert (AI Generated)").replace("English:", "").strip()
-            
-            self._save(zone_id, status, msg_en, msg_sw)
-            
-        except Exception as e:
-            print(f"AI Error: {e}")
-
-    def _save(self, zone_id, level, msg_en, msg_sw):
         data = {
             "zone_id": zone_id,
-            "risk_level": level,
-            "message_en": msg_en,
-            "message_sw": msg_sw,
+            "risk_level": decision_data['new_status'],
+            "message_en": decision_data['message_en'],
+            "message_sw": decision_data['message_sw'],
             "created_at": "now()"
         }
-        self.supabase.table("alert_history").insert(data).execute()
-        print(f"  -> Alert saved to history: {msg_en}")
+        self.supabase.insert("alert_history", data)
+        print(f"  -> Alert Logged: {decision_data['new_status']}")

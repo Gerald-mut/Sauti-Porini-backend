@@ -1,13 +1,22 @@
 import time
 import os
-from dotenv import load_dotenv
-from supabase import create_client
+from src.simple_supabase import SimpleSupabase
 from src.fetchers_supabase import SupabaseFetcher
 from src.state_manager_supabase import SupabaseStateManager
 from src.ai_analyzer import AIAnalyzer
 
-# Load env
-load_dotenv()
+# Simple .env loader to avoid dependencies
+def load_env_file():
+    if os.path.exists(".env"):
+        with open(".env", "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"): continue
+                if "=" in line:
+                    key, val = line.split("=", 1)
+                    os.environ[key.strip()] = val.strip()
+
+load_env_file()
 
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
@@ -17,17 +26,16 @@ if not URL or "your_supabase" in URL:
     exit(1)
 
 # Initialize
-supabase = create_client(URL, KEY)
+supabase = SimpleSupabase(URL, KEY)
 fetcher = SupabaseFetcher(URL, KEY)
 manager = SupabaseStateManager(supabase)
 ai = AIAnalyzer(supabase, os.getenv("GEMINI_API_KEY"))
 
 def run_agent():
-    print("--- Sauti Porini Agent Running ---")
+    print("--- Sauti Porini Agent Running (Requests Mode) ---")
     
     # Get all zones
-    zones_res = supabase.table("zones").select("id, name").execute()
-    zones = zones_res.data
+    zones = supabase.select("zones", "id, name")
     
     if not zones:
         print("No zones found! Did you run setup_db.sql in Supabase?")
@@ -39,25 +47,23 @@ def run_agent():
         print(f"\nProcessing {zname} (ID: {zid})...")
         
         # 1. Fetch & Store
-        # fetcher.fetch_and_store_data(zid) 
-        # COMMENTED OUT: We move this inside the loop to ensure logic order.
-        # Actually proper agent flow: Fetch -> Store -> Analyze.
-        # The fetcher stores it.
         fetcher.fetch_and_store_data(zid)
 
-        # 2. Analyze State
-        status, weather, fires = manager.analyze_zone(zid)
+        # 2. Analyze State (Gemini 3 Reasoning)
+        manager.analyze_zone(zid, zname, ai)
 
-        # 3. AI Alert if needed
-        if status in ["WATCH", "ALERT"]:
-            ai.generate_and_save_alert(zid, status, weather, fires)
+        # 3. AI Alert is now handled inside analyze_zone
 
     print("\nCycle complete. Waiting 15 minutes...")
 
 if __name__ == "__main__":
-    while True:
-        try:
-            run_agent()
-        except Exception as e:
-            print(f"Agent Loop Error: {e}")
-        time.sleep(900)
+    try:
+        while True:
+            try:
+                run_agent()
+            except Exception as e:
+                print(f"Agent Loop Error: {e}")
+            # CHANGED: Sleep for 15 seconds instead of 15 minutes for rapid testing/demo
+            time.sleep(15) 
+    except KeyboardInterrupt:
+        print("\n[STOP] Agent execution stopped by user. Goodbye!")
